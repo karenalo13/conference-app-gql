@@ -1,0 +1,14 @@
+input PagerInput {
+  page: Int!
+  pageSize: Int!
+}
+
+type Page {
+  page: Int!
+  pageSize: Int!
+}
+
+type Pagination {
+  currentPage: Page
+  totalCount: Int
+}
