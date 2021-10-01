@@ -5,6 +5,11 @@ const conferenceResolvers = {
       const data = await dataSources.conferenceDb.getConferenceList(pager, filters)
       return data
     }
+    ,
+    conference:async (_parent, { id }, { dataSources }, _info) => {
+      const data=await dataSources.conferenceDb.getConferenceById(id)
+      return data
+    }
   },
   ConferenceList: {
     pagination: async (_parent, { pager, filters }, { dataSources }, _info) => {
