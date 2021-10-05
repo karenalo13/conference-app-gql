@@ -10,6 +10,10 @@ const conferenceResolvers = {
     conference: async (_parent, { id }, { dataSources }, _info) => {
       const data = await dataSources.conferenceDb.getConferenceById(id)
       return data
+    },
+    users: async (_parent, { id }, { dataSources }, _info) =>{
+      const data=await dataSources.userDb.getUsers(id)
+      return data
     }
   },
   ConferenceList: {
@@ -59,8 +63,33 @@ const conferenceResolvers = {
     attend: async (_parent, { input }, { dataSources }, _info) => {
       const updateInput = { ...input, statusId: status.Attended }
       const statusId = await dataSources.conferenceDb.updateConferenceXAttendee(updateInput)
-      return statusId ? randomCharacters(10) : null
-    }
+      const suggestedConferences = await dataSources.conferenceApi.getConferenceSuggestions(input)
+      const code = statusId ? randomCharacters(10) : null
+      return { suggestedConferences, code }
+    },
+    withdraw: async (_parent, { input }, { dataSources }, _info) => {
+      const updateInput = { ...input, statusId: status.Withdrawn }
+      const statusId = await dataSources.conferenceDb.updateConferenceXAttendee(updateInput)
+      return statusId
+    },
+
+    saveConference: async (_parent, { input }, { dataSources }, _info) => {
+      const location = await dataSources.conferenceDb.updateLocation(input.location)
+      const updateConference = await dataSources.conferenceDb.updateConference({...input,location})
+      const speakers = await Promise.all(
+        input.speakers.map(async speaker => {
+          const updateSpeaker = await dataSources.conferenceDb.updateSpeaker(speaker)
+          const isMainSpeaker = await dataSources.conferenceDb.updateConferenceXSpeaker({
+            speakerId: updateSpeaker.id,
+            isMainSpeaker: speaker.isMainSpeaker,
+            conferenceId: updateConference.id
+          })
+          return { ...updateSpeaker, isMainSpeaker }
+        })
+      )
+      input?.deleteSpeakers?.length>0 && await dataSources.conferenceDb.deleteSpeakers(input.deleteSpeakers)
+    
+    return {...updateConference,location,speakers}}
   }
 }
 module.exports = conferenceResolvers

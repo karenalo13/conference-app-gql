@@ -44,7 +44,6 @@ class ConferenceDb extends SQLDataSource {
       .andWhere('ConferenceId', conferenceId)
       .first()
 
-
     const updateAttendee = {
       AttendeeEmail: attendeeEmail,
       ConferenceId: conferenceId,
@@ -60,6 +59,94 @@ class ConferenceDb extends SQLDataSource {
     }
     return result[0]
   }
+
+
+
+
+  async updateLocation(location) {
+    const content = {
+      Name: location.name,
+      Address: location.address,
+      Latitude: location.latitude,
+      Longitude: location.longitude,
+      CityId: parseInt(location.cityId),
+      CountyId: parseInt(location.countyId),
+      CountryId: parseInt(location.countryId)
+    }
+
+    const output = ['Id', 'Name', 'Address', 'Latitude', 'Longitude', 'CityId', 'CountyId', 'CountryId']
+
+    let result
+    if (location.id) {
+      result = await this.knex('Location').update(content, output).where('Id', location.id)
+    } else result = await this.knex('Location').returning(output).insert(content)
+
+    return result[0]
+  }
+
+  async updateConference({ id, name, startDate, endDate, location, category, type, organizerEmail }) {
+    const content = {
+      Name: name,
+      OrganizerEmail: organizerEmail,
+      StartDate: startDate,
+      EndDate: endDate,
+      LocationId: parseInt( location.id),
+      CategoryId:parseInt( category.id),
+      ConferenceTypeId: parseInt(type.id)
+    }
+
+    const output = ['Id', 'Name', 'OrganizerEmail', 'StartDate', 'EndDate', 'ConferenceTypeId', 'LocationId', 'CategoryId']
+
+    let result
+    if (id) {
+      result = await this.knex('Conference').update(content, output).where('Id', id)
+    } else {
+      result = await this.knex('Conference').returning(output).insert(content)
+    }
+    return result[0]
+  }
+
+  async updateSpeaker(speaker) {
+    const content = {
+      Name: speaker.name,
+      Nationality: speaker.nationality,
+      Rating:  parseFloat(speaker.rating)
+    }
+    const output = ['Id', 'Name', 'Nationality', 'Rating']
+    let result
+    if (parseInt(speaker.id) > 0) {
+      result = await this.knex('Speaker').update(content, output).where('Id', speaker.id)
+    } else {
+      result = await this.knex('Speaker').returning(output).insert(content)
+    }
+    return result[0]
+  }
+
+  async updateConferenceXSpeaker({speakerId, isMainSpeaker, conferenceId}) {
+    const current = await this.knex()
+      .select('Id')
+      .from('ConferenceXSpeaker')
+      .where('SpeakerId', speakerId)
+      .andWhere('ConferenceId', conferenceId)
+
+    let result
+    if (current.id) {
+      result = await this.knex('ConferenceXSpeaker')
+        .update({ IsMainSpeaker: Boolean(isMainSpeaker) }, 'IsMainSpeaker')
+        .where('Id', current.id)
+    } else {
+      result = await this.knex('ConferenceXSpeaker')
+        .returning('IsMainSpeaker')
+        .insert({ SpeakerId: parseInt(speakerId), IsMainSpeaker: Boolean(isMainSpeaker), ConferenceId:  parseInt(conferenceId) })
+    }
+    return result[0]
+  }
+
+  async deleteSpeakers(speakerIds){
+    await this.knex('ConferenceXSpeaker').whereIn('SpeakerId',speakerIds).del()
+    await this.knex('Speaker').whereIn('Id',speakerIds).del()
+  }
+
 }
 
 module.exports = ConferenceDb
